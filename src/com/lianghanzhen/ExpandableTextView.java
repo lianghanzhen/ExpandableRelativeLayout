@@ -6,79 +6,75 @@ import android.util.AttributeSet;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.Transformation;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 /**
- * RelativeLayout that can be expanded and collapsed.
+ *
  */
-public class ExpandableRelativeLayout extends RelativeLayout {
+public class ExpandableTextView extends TextView {
 
-    private static final int INVALID_EXPANDER_ID = 0;
     private static final boolean DEFAULT_EXPANDED = false;
     private static final int DEFAULT_MIN_LINES = 3;
     public static final int EXPANDER_MAX_LINES = Integer.MAX_VALUE;
+    private static final long DEFAULT_ANIMATION_DURATION = 400;
 
-    private int mExpanderId;
-    private TextView mExpander;
-    private boolean mExpanded;
-    private int mMinLines;
+    private boolean mExpanded = DEFAULT_EXPANDED;
+    private int mMinLines = DEFAULT_MIN_LINES;
     private int mOriginalWidth;
     private int mOriginalHeight;
     private int mCollapseHeight;
 
     private boolean mInitialized;
     private boolean mAnimating;
+    private long mAnimationDuration = DEFAULT_ANIMATION_DURATION;
 
     private OnExpandListener mOnExpandListener;
     private OnCollapseListener mOnCollapseListener;
 
     //region Constructor
 
-    public ExpandableRelativeLayout(Context context, AttributeSet attrs) {
+    public ExpandableTextView(Context context) {
+        super(context);
+        init(context, null);
+    }
+
+    public ExpandableTextView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init(context, attrs);
     }
 
-    public ExpandableRelativeLayout(Context context, AttributeSet attrs, int defStyle) {
+    public ExpandableTextView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         init(context, attrs);
     }
 
     private void init(Context context, AttributeSet attrs) {
-        final TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.ExpandableRelativeLayout);
-        mExpanderId = typedArray.getResourceId(R.styleable.ExpandableRelativeLayout_expander, INVALID_EXPANDER_ID);
-        mExpanded = typedArray.getBoolean(R.styleable.ExpandableRelativeLayout_expanded, DEFAULT_EXPANDED);
-        mMinLines = typedArray.getInteger(R.styleable.ExpandableRelativeLayout_minLines, DEFAULT_MIN_LINES);
+        final TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.ExpandableTextView);
+        mExpanded = typedArray.getBoolean(R.styleable.ExpandableTextView_expanded, DEFAULT_EXPANDED);
+        mMinLines = typedArray.getInteger(R.styleable.ExpandableTextView_minLines, DEFAULT_MIN_LINES);
         typedArray.recycle();
     }
 
     //endregion
 
     @Override
-    protected void onFinishInflate() {
-        super.onFinishInflate();
-        if (mExpanderId == INVALID_EXPANDER_ID) {
-            throw new IllegalStateException("Do you forget to set expander property to ExpandableRelativeLayout.");
-        }
-        mExpander = (TextView) findViewById(mExpanderId);
-        if (mExpander == null) {
-            throw new NullPointerException("ExpandableRelativeLayout must have a TextView with id that you set the property expander.");
-        }
-    }
-
-    @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         if (!mInitialized) {
-            mOriginalWidth = mExpander.getMeasuredWidth();
-            mOriginalHeight = mExpander.getMeasuredHeight();
-            mExpander.setMaxLines(mMinLines);
+            mOriginalWidth = getMeasuredWidth();
+            mOriginalHeight = getMeasuredHeight();
+            setMaxLines(mMinLines);
             super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-            mCollapseHeight = mExpander.getMeasuredHeight();
-            mExpander.setMaxLines(EXPANDER_MAX_LINES);
-            mExpander.setMaxLines(mExpanded ? EXPANDER_MAX_LINES : mMinLines);
+            mCollapseHeight = getMeasuredHeight();
             mInitialized = true;
+            setMeasuredDimension(mOriginalWidth, mExpanded ? mOriginalHeight : mCollapseHeight);
+        } else if (getTag(R.id.tag_expandable_text_view_reused) != null && !mAnimating) {
+            setTag(R.id.tag_expandable_text_view_reused, null);
+            mOriginalWidth = getMeasuredWidth();
+            final int lineHeight = getLineHeight();
+            mOriginalHeight = lineHeight * getLineCount() + 1;
+            mCollapseHeight = lineHeight * mMinLines + 1;
+            setMeasuredDimension(mOriginalWidth, mExpanded ? mOriginalHeight : mCollapseHeight);
         }
     }
 
@@ -106,9 +102,10 @@ public class ExpandableRelativeLayout extends RelativeLayout {
         }
 
         if (animated) {
+            mAnimating = true;
             startAnimation(new ExpandAnimation());
         } else {
-            mExpander.setMaxLines(EXPANDER_MAX_LINES);
+            setMaxLines(EXPANDER_MAX_LINES);
             toggleOnExpandListener();
         }
         mExpanded = true;
@@ -124,9 +121,10 @@ public class ExpandableRelativeLayout extends RelativeLayout {
         }
 
         if (animated) {
+            mAnimating = true;
             startAnimation(new ExpandAnimation());
         } else {
-            mExpander.setMaxLines(mMinLines);
+            setMaxLines(mMinLines);
             toggleOnCollapseListener();
         }
         mExpanded = false;
@@ -152,12 +150,12 @@ public class ExpandableRelativeLayout extends RelativeLayout {
 
     //region Setters And Getters
 
-    public ExpandableRelativeLayout setOnExpandListener(OnExpandListener onExpandListener) {
+    public ExpandableTextView setOnExpandListener(OnExpandListener onExpandListener) {
         mOnExpandListener = onExpandListener;
         return this;
     }
 
-    public ExpandableRelativeLayout setOnCollapseListener(OnCollapseListener onCollapseListener) {
+    public ExpandableTextView setOnCollapseListener(OnCollapseListener onCollapseListener) {
         mOnCollapseListener = onCollapseListener;
         return this;
     }
@@ -174,22 +172,25 @@ public class ExpandableRelativeLayout extends RelativeLayout {
      */
     public void setExpanded(boolean expanded) {
         mExpanded = expanded;
-        changeExpanderHeight(expanded ? mOriginalHeight : mCollapseHeight);
-        mExpander.setMaxLines(mExpanded ? EXPANDER_MAX_LINES : mMinLines);
+        mAnimating = false;
+        setMaxLines(EXPANDER_MAX_LINES);
     }
 
     public boolean isAnimating() {
         return mAnimating;
     }
 
-    public TextView getExpander() {
-        return mExpander;
+    public void setAnimationDuration(long animationDuration) {
+        mAnimationDuration = animationDuration;
     }
 
     //endregion
 
     private void changeExpanderHeight(int height) {
-        mExpander.setLayoutParams(new LayoutParams(new ViewGroup.LayoutParams(mOriginalWidth, height)));
+        ViewGroup.LayoutParams params = getLayoutParams();
+        params.width = mOriginalWidth;
+        params.height = height;
+        setLayoutParams(params);
     }
 
     //region ExpandAnimation
@@ -208,10 +209,10 @@ public class ExpandableRelativeLayout extends RelativeLayout {
             } else {
                 mStartHeight = mCollapseHeight;
                 endHeight = mOriginalHeight;
-                mExpander.setMaxLines(EXPANDER_MAX_LINES);
+                setMaxLines(EXPANDER_MAX_LINES);
             }
             mDistance = endHeight - mStartHeight;
-            setDuration(500);
+            setDuration(mAnimationDuration);
             setAnimationListener(new ExpandAnimationListener());
         }
 
@@ -242,7 +243,7 @@ public class ExpandableRelativeLayout extends RelativeLayout {
         public void onAnimationEnd(Animation animation) {
             mAnimating = false;
             if (!mExpanded) {
-                mExpander.setMaxLines(mMinLines);
+                setMaxLines(mMinLines);
                 toggleOnCollapseListener();
             } else {
                 toggleOnExpandListener();
@@ -256,11 +257,11 @@ public class ExpandableRelativeLayout extends RelativeLayout {
     //region OnExpandListener And OnCollapseListener
 
     public interface OnExpandListener {
-        void onExpand(ExpandableRelativeLayout parent);
+        void onExpand(ExpandableTextView parent);
     }
 
     public interface OnCollapseListener {
-        void onCollapse(ExpandableRelativeLayout parent);
+        void onCollapse(ExpandableTextView parent);
     }
 
     //endregion

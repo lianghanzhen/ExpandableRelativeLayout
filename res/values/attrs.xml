@@ -2,8 +2,7 @@
 
 <resources>
 
-    <declare-styleable name="ExpandableRelativeLayout">
-        <attr name="expander" format="reference" />
+    <declare-styleable name="ExpandableTextView">
         <attr name="expanded" format="boolean" />
         <attr name="minLines" format="integer" />
     </declare-styleable>

@@ -36,7 +36,7 @@ public class MyActivity extends ListActivity {
         public String getItem(int position) {
             final StringBuilder result = new StringBuilder();
             result.append(String.format("Position: #%d", position)).append("\n");
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < position + 1; i++) {
                 result.append("\t").append(String.format("LINE #%d", (i + 1))).append("\n");
             }
             result.deleteCharAt(result.length() - 1);
@@ -54,21 +54,23 @@ public class MyActivity extends ListActivity {
             if (convertView == null) {
                 convertView = mLayoutInflater.inflate(R.layout.main, parent, false);
                 viewHolder = new ViewHolder();
-                viewHolder.mContainer = (ExpandableRelativeLayout) convertView.findViewById(R.id.container);
-                convertView.setTag(viewHolder);
+                viewHolder.mContainer = (ExpandableTextView) convertView.findViewById(R.id.container);
+                convertView.setTag(R.id.tag, viewHolder);
             } else {
-                viewHolder = (ViewHolder) convertView.getTag();
+                viewHolder = (ViewHolder) convertView.getTag(R.id.tag);
+                viewHolder.mContainer.setTag(R.id.tag_expandable_text_view_reused, new Object());
                 viewHolder.mContainer.setExpanded(mExpanded.get(position));
             }
-            viewHolder.mContainer.getExpander().setText(getItem(position));
-            viewHolder.mContainer.setOnExpandListener(new ExpandableRelativeLayout.OnExpandListener() {
+            viewHolder.mContainer.setTag(position);
+            viewHolder.mContainer.setText(getItem(position));
+            viewHolder.mContainer.setOnExpandListener(new ExpandableTextView.OnExpandListener() {
                 @Override
-                public void onExpand(ExpandableRelativeLayout parent) {
+                public void onExpand(ExpandableTextView parent) {
                     mExpanded.put(position, true);
                 }
-            }).setOnCollapseListener(new ExpandableRelativeLayout.OnCollapseListener() {
+            }).setOnCollapseListener(new ExpandableTextView.OnCollapseListener() {
                 @Override
-                public void onCollapse(ExpandableRelativeLayout parent) {
+                public void onCollapse(ExpandableTextView parent) {
                     mExpanded.put(position, false);
                 }
             }).setOnClickListener(new View.OnClickListener() {
@@ -81,7 +83,7 @@ public class MyActivity extends ListActivity {
         }
 
         private static class ViewHolder {
-            ExpandableRelativeLayout mContainer;
+            ExpandableTextView mContainer;
         }
 
     }

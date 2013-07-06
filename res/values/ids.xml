@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <item name="tag" type="id" />
+    <item name="tag_expandable_text_view_reused" type="id" />
+
+</resources>
